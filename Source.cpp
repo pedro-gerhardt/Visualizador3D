@@ -36,6 +36,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 int setupShader();
 int setupGeometry();
 int loadSimpleOBJ(string filePATH, int &nVertices);
+int loadSimplePLY(string filePath, int &nVertices);
 
 // Dimensões da janela (pode ser alterado em tempo de execução)
 const GLuint WIDTH = 1000, HEIGHT = 1000;
@@ -123,7 +124,8 @@ int main()
 	int nVertices;
 	int nVertices2;
 	GLuint VAO = loadSimpleOBJ("cube.obj", nVertices);
-	GLuint VAO2 = loadSimpleOBJ("cube2.obj", nVertices2);
+	// GLuint VAO2 = loadSimpleOBJ("cube2.obj", nVertices2);
+	// GLuint VAO2 = loadSimplePLY("cube2.ply", nVertices2);
 	// GLuint VAO = setupGeometry();
 
 	glUseProgram(shaderID);
@@ -427,6 +429,115 @@ int setupGeometry()
 
 int loadSimpleOBJ(string filePath, int &nVertices)
 {
+	// GLuint VBO;
+	GLuint VBO, VAO;
+	vector <glm::vec3> vertices;
+
+	vector <GLfloat> vBuffer;
+
+	ifstream arqEntrada;
+
+	arqEntrada.open(filePath.c_str());
+	if (arqEntrada)
+	{
+		//Fazer o parsing
+		char line[100];
+		string sline;
+		while (!arqEntrada.eof())
+		{
+			arqEntrada.getline(line,100);
+			sline = line;
+			istringstream ssline(sline);
+			string word;
+			ssline >> word;
+			if (word == "v")
+			{
+				glm::vec3 vertice;
+				ssline >> vertice.x >> vertice.y >> vertice.z;
+				// cout << vertice.x << " " << vertice.y << " " << vertice.z << endl;
+				vertices.push_back(vertice);
+			}
+			else if (word == "f")
+			{
+				// pegando apenas a coordenada do vértice
+				string data;
+				cout << "entrou f" << endl;
+				while(getline(ssline, data, ' ')){
+					size_t idx = data.find('/');
+					if (idx != std::string::npos){
+						string subVertices = data.substr(0, idx);
+						istringstream subVerStr(subVertices);
+						size_t posicao;
+						subVerStr >> posicao;
+						glm::vec3 vec = vertices.at(posicao-1);
+						// coordenadas
+						vBuffer.push_back(vec.x);
+						vBuffer.push_back(vec.y);
+						vBuffer.push_back(vec.z);
+						// cores
+						vBuffer.push_back(0.0);
+						vBuffer.push_back(0.0);
+						vBuffer.push_back(1.0);
+						// cout << posicao << " " << vec.x << " " << vec.y << " " << vec.z << endl;
+						nVertices++;
+					}
+				}
+			}
+		}
+		
+		cout << "pivot" << endl;
+
+		//Geração do identificador do VBO
+		glGenBuffers(1, &VBO);
+
+		//Faz a conexão (vincula) do buffer como um buffer de array
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+		//Envia os dados do array de floats para o buffer da OpenGl
+		// glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices.data(), GL_STATIC_DRAW);		
+		// glBufferData(GL_ARRAY_BUFFER, vertices.size(), vertices.data(), GL_STATIC_DRAW);		
+		glBufferData(GL_ARRAY_BUFFER, vBuffer.size()* sizeof(GLfloat), vBuffer.data(), GL_STATIC_DRAW);		
+
+		//Geração do identificador do VAO (Vertex Array Object)
+		glGenVertexArrays(1, &VAO);
+
+		// Vincula (bind) o VAO primeiro, e em seguida  conecta e seta o(s) buffer(s) de vértices
+		// e os ponteiros para os atributos 
+		glBindVertexArray(VAO);
+		
+		//Para cada atributo do vertice, criamos um "AttribPointer" (ponteiro para o atributo), indicando: 
+		// Localização no shader * (a localização dos atributos devem ser correspondentes no layout especificado no vertex shader)
+		// Numero de valores que o atributo tem (por ex, 3 coordenadas xyz) 
+		// Tipo do dado
+		// Se está normalizado (entre zero e um)
+		// Tamanho em bytes 
+		// Deslocamento a partir do byte zero 
+		
+		//Atributo posição (x, y, z)
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0);
+		glEnableVertexAttribArray(0);
+
+		//Atributo cor (r, g, b)
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
+		glEnableVertexAttribArray(1);
+
+
+		// Observe que isso é permitido, a chamada para glVertexAttribPointer registrou o VBO como o objeto de buffer de vértice 
+		// atualmente vinculado - para que depois possamos desvincular com segurança
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		// Desvincula o VAO (é uma boa prática desvincular qualquer buffer ou array para evitar bugs medonhos)
+		glBindVertexArray(0);
+	}
+	else
+	{
+		cout << "Erro ao tentar ler o arquivo " << filePath << endl;
+	}
+
+	return VAO;
+}
+
+int loadSimplePLY(string filePath, int &nVertices) {
 	// GLuint VBO;
 	GLuint VBO, VAO;
 	vector <glm::vec3> vertices;
