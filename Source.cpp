@@ -125,6 +125,12 @@ int main()
 	GLuint VAO = loadSimpleOBJ("cube.obj", nVertices);
 	GLuint VAO2 = loadSimpleOBJ("cube2.obj", nVertices2);
 	// GLuint VAO = setupGeometry();
+	// int qntCubes;
+	// vector<int> vertices;
+	// vector<GLuint> VAOs;
+	// for (int i = 0; i < qntCubes; i++) {
+	// 	VAOs.push_back(loadSimpleOBJ("cube" + to_string(i) + ".obj", vertices[i]));
+	// }
 
 	glUseProgram(shaderID);
 
