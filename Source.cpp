@@ -42,6 +42,71 @@ struct Object
 	glm::mat4 model;
 };
 
+const GLchar* vertexShaderSource = "#version 430\n"
+"layout (location = 0) in vec3 position;\n"
+"layout (location = 1) in vec3 color;\n"
+"layout (location = 2) in vec2 texc;\n"
+"layout (location = 3) in vec3 normal;\n"
+"\n"
+"uniform mat4 model;\n"
+"uniform mat4 projection;\n"
+"uniform mat4 view;\n"
+"\n"
+"//Variáveis que irão para o fragment shader\n"
+"out vec3 finalColor;\n"
+"out vec2 texCoord;\n"
+"out vec3 scaledNormal;\n"
+"out vec3 fragPos;\n"
+"\n"
+"void main()\n"
+"{\n"
+"	//...pode ter mais linhas de código aqui!\n"
+"	gl_Position = projection * view * model * vec4(position, 1.0);\n"
+"	finalColor = color;\n"
+"    texCoord = texc;\n"
+"    fragPos = vec3(model * vec4(position, 1.0));\n"
+"    scaledNormal = vec3(model * vec4(normal, 1.0));\n"
+"}\n\0";
+
+//Códifo fonte do Fragment Shader (em GLSL): ainda hardcoded
+const GLchar* fragmentShaderSource = "#version 430\n"
+"\n"
+"in vec3 finalColor;\n"
+"in vec2 texCoord;\n"
+"in vec3 scaledNormal;\n"
+"in vec3 fragPos;\n"
+"\n"
+"uniform float ka, kd, ks, q;\n"
+"\n"
+"uniform vec3 lightPos, lightColor;\n"
+"\n"
+"uniform vec3 cameraPos;\n"
+"\n"
+"out vec4 color;\n"
+"\n"
+"void main()\n"
+"{\n"
+"    vec3 ambient = ka * lightColor;\n"
+"\n"
+"    vec3 diffuse;\n"
+"    vec3 N = normalize(scaledNormal);\n"
+"    vec3 L = normalize(lightPos - fragPos);\n"
+"    float diff = max(dot(N,L),0.0);\n"
+"    diffuse = kd * diff * lightColor;\n"
+"\n"
+"    vec3 specular;\n"
+"    vec3 R = normalize(reflect(-L,N));\n"
+"    vec3 V = normalize(cameraPos - fragPos);\n"
+"    float spec = max(dot(R,V),0.0);\n"
+"    spec = pow(spec,q);\n"
+"    specular = ks * spec * lightColor;\n"
+"\n"
+"    vec3 result = (ambient + diffuse) * finalColor + specular;\n"
+"\n"
+"    color = vec4(result,1.0);\n"
+"}\n\0";
+
+
 // Função MAIN
 int main()
 {
@@ -71,20 +136,18 @@ int main()
 	glViewport(0, 0, width, height);
 
 
-	// Gerando um buffer simples, com a geometria de um triângulo
-	// vector<Object> objetos;
-	Object obj;
-	// int nVertices;
-	obj.VAO = loadSimpleOBJ("cube0.obj", obj.nVertices);
-	// int nVertices2;
-	// GLuint VAO2 = loadSimpleOBJ("cube1.obj", nVertices2);
-	// int qntCubes = 2;
-	// for (int i = 0; i < qntCubes; i++) {
-	// 	Object obj;
-	// 	obj.VAO = loadSimpleOBJ("cube" + to_string(i) + ".obj", obj.nVertices);
-	// }
+	vector<Object> objetos;
+	int qntCubes = 3;
+	for (int i = 0; i < qntCubes; i++) {
+		Object obj;
+		obj.VAO = loadSimpleOBJ("cube" + to_string(i) + ".obj", obj.nVertices);
+		objetos.push_back(obj);
+	}
 
-	Shader shader("phong.vs","phong.fs");
+	Object objSelecionado = objetos[0];
+
+	// Shader shader("phong.vs","phong.fs");
+	Shader shader(vertexShaderSource, fragmentShaderSource, false);
 	glUseProgram(shader.ID);
 
 	//Matriz de modelo
@@ -113,14 +176,11 @@ int main()
 	shader.setVec3("lightPos", -2.0, 10.0, 3.0);
 	shader.setVec3("lightColor", 1.0, 1.0, 1.0);
 
-	// Loop da aplicação - "game loop"
 	while (!glfwWindowShouldClose(window))
 	{
-		// Checa se houveram eventos de input (key pressed, mouse moved etc.) e chama as funções de callback correspondentes
 		glfwPollEvents();
 
-		// Limpa o buffer de cor
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); //cor de fundo
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glLineWidth(10);
@@ -128,42 +188,44 @@ int main()
 
 		float angle = (GLfloat)glfwGetTime();
 
-		obj.model = glm::mat4(1);
+		objSelecionado.model = glm::mat4(1);
 		if (rotateX)
 		{
-			obj.model = glm::rotate(obj.model, angle, glm::vec3(1.0f, 0.0f, 0.0f));
+			objSelecionado.model = glm::rotate(objSelecionado.model, angle, glm::vec3(1.0f, 0.0f, 0.0f));
 		}
 		else if (rotateY)
 		{
-			obj.model = glm::rotate(obj.model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
+			objSelecionado.model = glm::rotate(objSelecionado.model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
 		}
 		else if (rotateZ)
 		{
-			obj.model = glm::rotate(obj.model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+			objSelecionado.model = glm::rotate(objSelecionado.model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
 		}
 
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(obj.model));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(objSelecionado.model));
 		
-		glm::mat4 view = glm::lookAt(cameraPos,cameraPos + cameraFront,cameraUp);
+		glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 		glUniformMatrix4fv(glGetUniformLocation(shader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
 				
-		shader.setVec3("cameraPos",cameraPos.x, cameraPos.y, cameraPos.z);
-		glBindVertexArray(obj.VAO);
-		glDrawArrays(GL_TRIANGLES, 0, obj.nVertices);
-		// glDrawArrays(GL_POINTS, 0, obj.nVertices);
-		// glBindVertexArray(0);
+		shader.setVec3("cameraPos", cameraPos.x, cameraPos.y, cameraPos.z);
+
+		
+		for (int i = 0; i < qntCubes; i++) {
+			glBindVertexArray(objetos[i].VAO);
+			glDrawArrays(GL_TRIANGLES, 0, objetos[i].nVertices);
+		}
 
 		glfwSwapBuffers(window);
 	}
 
-	glDeleteVertexArrays(1, &obj.VAO);
+	// glDeleteVertexArrays(1, &objSelecionado.VAO);
+	for (int i = 0; i < qntCubes; i++) {
+		glDeleteVertexArrays(1, &objetos[i].VAO);
+	}
 	glfwTerminate();
 	return 0;
 }
 
-// Função de callback de teclado - só pode ter uma instância (deve ser estática se
-// estiver dentro de uma classe) - É chamada sempre que uma tecla for pressionada
-// ou solta via GLFW
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
@@ -229,12 +291,8 @@ int loadSimpleOBJ(string filePath, int &nVertices)
 	if (arqEntrada.is_open())
 	{
 		string line;
-		// while (!arqEntrada.eof())
-		// while (arqEntrada >> line)
 		while (getline(arqEntrada, line))
 		{
-			// getline(arqEntrada,line);
-			// if (line == "") break;
 			istringstream ssline(line);
 			string word;
 			ssline >> word;
