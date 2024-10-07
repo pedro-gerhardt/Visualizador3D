@@ -417,7 +417,7 @@ int loadSimplePLY(string filePath, int &nVertices)
         }
 
         // lê as faces
-        // Nota: Assumindo que cada face começa com '4' seguido pelos índices dos vértices
+        // assumindo que cada face começa com '4' seguido pelos índices dos vértices
         arqEntrada.clear();
         arqEntrada.seekg(0); // Voltar ao início do arquivo para ler faces
 
@@ -470,8 +470,6 @@ int loadSimplePLY(string filePath, int &nVertices)
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
 		//Envia os dados do array de floats para o buffer da OpenGl
-		// glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices.data(), GL_STATIC_DRAW);		
-		// glBufferData(GL_ARRAY_BUFFER, vertices.size(), vertices.data(), GL_STATIC_DRAW);		
 		glBufferData(GL_ARRAY_BUFFER, vBuffer.size()* sizeof(GLfloat), vBuffer.data(), GL_STATIC_DRAW);		
 
 		//Geração do identificador do VAO (Vertex Array Object)
@@ -481,14 +479,6 @@ int loadSimplePLY(string filePath, int &nVertices)
 		// e os ponteiros para os atributos 
 		glBindVertexArray(VAO);
 		
-		//Para cada atributo do vertice, criamos um "AttribPointer" (ponteiro para o atributo), indicando: 
-		// Localização no shader * (a localização dos atributos devem ser correspondentes no layout especificado no vertex shader)
-		// Numero de valores que o atributo tem (por ex, 3 coordenadas xyz) 
-		// Tipo do dado
-		// Se está normalizado (entre zero e um)
-		// Tamanho em bytes 
-		// Deslocamento a partir do byte zero 
-		
 		//Atributo posição (x, y, z)
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0);
 		glEnableVertexAttribArray(0);
@@ -497,8 +487,6 @@ int loadSimplePLY(string filePath, int &nVertices)
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
 		glEnableVertexAttribArray(1);
 
-
-		// Observe que isso é permitido, a chamada para glVertexAttribPointer registrou o VBO como o objeto de buffer de vértice 
 		// atualmente vinculado - para que depois possamos desvincular com segurança
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
