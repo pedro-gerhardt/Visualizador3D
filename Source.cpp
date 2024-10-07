@@ -143,7 +143,7 @@ int main()
 	int qntCubes = 3;
 	for (int i = 0; i < qntCubes; i++) {
 		Object obj;
-		obj.VAO = loadSimplePLY("C:\\Users\\muril\\Documents\\Visualizador3D\\cube" + to_string(i) + ".ply", obj.nVertices);
+		obj.VAO = loadSimpleOBJ("cube" + to_string(i) + ".obj", obj.nVertices);
 		objetos.push_back(obj);
 	}
 
@@ -469,7 +469,15 @@ int loadSimplePLY(string filePath, int &nVertices)
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, vBuffer.size() * sizeof(GLfloat), vBuffer.data(), GL_STATIC_DRAW);
 
+		glGenVertexArrays(1, &VAO);
+		glGenVertexArrays(1, &VAO);
+
+		// Vincula (bind) o VAO primeiro, e em seguida  conecta e seta o(s) buffer(s) de vértices
+		// e os ponteiros para os atributos 
         glGenVertexArrays(1, &VAO);
+
+		// Vincula (bind) o VAO primeiro, e em seguida  conecta e seta o(s) buffer(s) de vértices
+		// e os ponteiros para os atributos 
         glBindVertexArray(VAO);
         
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0);
@@ -478,7 +486,13 @@ int loadSimplePLY(string filePath, int &nVertices)
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
         glEnableVertexAttribArray(1);
 
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		// Desvincula o VAO (é uma boa prática desvincular qualquer buffer ou array para evitar bugs medonhos)
         glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		// Desvincula o VAO (é uma boa prática desvincular qualquer buffer ou array para evitar bugs medonhos)
         glBindVertexArray(0);
     }
     else
