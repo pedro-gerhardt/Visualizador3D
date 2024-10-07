@@ -27,7 +27,7 @@ int loadSimpleOBJ(string filePATH, int &nVertices);
 int loadSimplePLY(string filePath, int &nVertices);
 
 // Dimensões da janela (pode ser alterado em tempo de execução)
-const GLuint WIDTH = 1000, HEIGHT = 1000;
+const GLuint WIDTH = 2000, HEIGHT = 1000;
 
 bool rotateX=false, rotateY=false, rotateZ=false;
 
@@ -42,6 +42,9 @@ struct Object
 	int nVertices;
 	glm::mat4 model;
 	float fatorEscala = 1.0f; // valor inicial de escala
+	float translacaoX = 0.0f;
+	float translacaoY = 0.0f; 
+	float translacaoZ = 0.0f; 
 };
 
 vector<Object> objetos;
@@ -143,7 +146,7 @@ int main()
 	int qntCubes = 3;
 	for (int i = 0; i < qntCubes; i++) {
 		Object obj;
-		obj.VAO = loadSimpleOBJ("cube" + to_string(i) + ".obj", obj.nVertices);
+		obj.VAO = loadSimplePLY("C:\\Users\\Patrick\\Desktop\\pg\\2024\\trabGA\\Visualizador3D\\cube" + to_string(i) + ".ply", obj.nVertices);
 		objetos.push_back(obj);
 	}
 
@@ -210,6 +213,9 @@ int main()
 
 				// Aplicar a escala
 				objetos[i].model = glm::scale(objetos[i].model, glm::vec3(objetos[i].fatorEscala, objetos[i].fatorEscala, objetos[i].fatorEscala));
+
+				// Aplicar a translação
+				objetos[i].model = glm::translate(objetos[i].model, glm::vec3(objetos[i].translacaoX, objetos[i].translacaoY, objetos[i].translacaoZ));
 			}
 
 			// Passe a matriz 'model' para o shader para cada cubo
@@ -297,6 +303,30 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		if (key == GLFW_KEY_E)
 		{
 			objetos[objSelecionado].fatorEscala -= 0.1f;
+		}
+		if (key == GLFW_KEY_4)
+		{
+			objetos[objSelecionado].translacaoX += 0.1f;
+		}
+		if (key == GLFW_KEY_5)
+		{
+			objetos[objSelecionado].translacaoX -= 0.1f;
+		}
+		if (key == GLFW_KEY_6)
+		{
+			objetos[objSelecionado].translacaoY += 0.1f;
+		}
+		if (key == GLFW_KEY_7)
+		{
+			objetos[objSelecionado].translacaoY -= 0.1f;
+		}
+		if (key == GLFW_KEY_8)
+		{
+			objetos[objSelecionado].translacaoZ += 0.1f;
+		}
+		if (key == GLFW_KEY_9)
+		{
+			objetos[objSelecionado].translacaoZ -= 0.1f;
 		}
 	}
 }
