@@ -123,7 +123,7 @@ int main()
 	// Gerando um buffer simples, com a geometria de um triângulo
 	int nVertices;
 	int nVertices2;
-	GLuint VAO = loadSimpleOBJ("cube.obj", nVertices);
+	GLuint VAO = loadSimplePLY("C:\\Users\\muril\\Documents\\Visualizador3D\\cube2.ply", nVertices);
 	// GLuint VAO2 = loadSimpleOBJ("cube2.obj", nVertices2);
 	// GLuint VAO2 = loadSimplePLY("cube2.ply", nVertices2);
 	// GLuint VAO = setupGeometry();
@@ -198,7 +198,7 @@ int main()
 		glDrawArrays(GL_POINTS, 0, nVertices);
 		glBindVertexArray(0);
 
-		glBindVertexArray(VAO2);
+		// glBindVertexArray(VAO2);
 		glDrawArrays(GL_TRIANGLES, 0, nVertices2);
 		glDrawArrays(GL_POINTS, 0, nVertices2);
 		glBindVertexArray(0);
@@ -208,7 +208,7 @@ int main()
 	}
 	// Pede pra OpenGL desalocar os buffers
 	glDeleteVertexArrays(1, &VAO);
-	glDeleteVertexArrays(1, &VAO2);
+	// glDeleteVertexArrays(1, &VAO2);
 	// Finaliza a execução da GLFW, limpando os recursos alocados por ela
 	glfwTerminate();
 	return 0;
@@ -537,64 +537,79 @@ int loadSimpleOBJ(string filePath, int &nVertices)
 	return VAO;
 }
 
-int loadSimplePLY(string filePath, int &nVertices) {
-	// GLuint VBO;
-	GLuint VBO, VAO;
-	vector <glm::vec3> vertices;
+int loadSimplePLY(string filePath, int &nVertices)
+{
+    GLuint VBO, VAO;
+    vector<glm::vec3> vertices;
+    vector<GLfloat> vBuffer;
 
-	vector <GLfloat> vBuffer;
+    ifstream arqEntrada(filePath.c_str());
+    if (arqEntrada)
+    {
+        string line;
 
-	ifstream arqEntrada;
+        // lê até encontrar o cabeçalho
+        while (getline(arqEntrada, line))
+        {
+            if (line == "end_header") 
+                break;
+        }
 
-	arqEntrada.open(filePath.c_str());
-	if (arqEntrada)
-	{
-		//Fazer o parsing
-		char line[100];
-		string sline;
-		while (!arqEntrada.eof())
-		{
-			arqEntrada.getline(line,100);
-			sline = line;
-			istringstream ssline(sline);
-			string word;
-			ssline >> word;
-			if (word == "v")
-			{
-				glm::vec3 vertice;
-				ssline >> vertice.x >> vertice.y >> vertice.z;
-				// cout << vertice.x << " " << vertice.y << " " << vertice.z << endl;
-				vertices.push_back(vertice);
-			}
-			else if (word == "f")
-			{
-				// pegando apenas a coordenada do vértice
-				string data;
-				cout << "entrou f" << endl;
-				while(getline(ssline, data, ' ')){
-					size_t idx = data.find('/');
-					if (idx != std::string::npos){
-						string subVertices = data.substr(0, idx);
-						istringstream subVerStr(subVertices);
-						size_t posicao;
-						subVerStr >> posicao;
-						glm::vec3 vec = vertices.at(posicao-1);
-						// coordenadas
-						vBuffer.push_back(vec.x);
-						vBuffer.push_back(vec.y);
-						vBuffer.push_back(vec.z);
-						// cores
-						vBuffer.push_back(0.0);
-						vBuffer.push_back(0.0);
-						vBuffer.push_back(1.0);
-						// cout << posicao << " " << vec.x << " " << vec.y << " " << vec.z << endl;
-						nVertices++;
-					}
-				}
-			}
-		}
-		
-		cout << "pivot" << endl;
+        // lê os vértices
+        while (getline(arqEntrada, line))
+        {
+            istringstream ssline(line);
+            glm::vec3 vertice;
+            ssline >> vertice.x >> vertice.y >> vertice.z;
+            vertices.push_back(vertice);
+        }
+
+        // lê as faces
+        // Nota: Assumindo que cada face começa com '4' seguido pelos índices dos vértices
+        arqEntrada.clear();
+        arqEntrada.seekg(0); // Voltar ao início do arquivo para ler faces
+
+        // Ignora o cabeçalho novamente
+        while (getline(arqEntrada, line))
+        {
+            if (line == "end_header") 
+                break; // Termina a leitura do cabeçalho
+        }
+
+        while (getline(arqEntrada, line))
+{
+    istringstream ssline(line);
+    int n;
+    ssline >> n; // numero de vértices que compõem a face
+
+    if (n == 4) { // só poligonais de 4 vértices (quads)
+        int idx[4];
+        for (int i = 0; i < n; i++) {
+            ssline >> idx[i];
+        }
+
+        // triangularizando a face
+        for (int i = 0; i < 2; i++) {
+            int v0 = idx[0];
+            int v1 = idx[i + 1];
+            int v2 = idx[i + 2];
+
+            for (int j = 0; j < 3; j++) {
+                int vertexIndex = (j == 0) ? v0 : (j == 1) ? v1 : v2;
+                glm::vec3 vec = vertices.at(vertexIndex);
+                // coordenadas
+                vBuffer.push_back(vec.x);
+                vBuffer.push_back(vec.y);
+                vBuffer.push_back(vec.z);
+                // cores
+                vBuffer.push_back(0.0f);
+                vBuffer.push_back(0.0f);
+                vBuffer.push_back(1.0f);
+                nVertices++;
+            }
+        }
+    }
+}
 
 		//Geração do identificador do VBO
 		glGenBuffers(1, &VBO);
@@ -645,3 +660,4 @@ int loadSimplePLY(string filePath, int &nVertices) {
 
 	return VAO;
 }
+
