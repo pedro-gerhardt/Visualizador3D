@@ -15,6 +15,7 @@
                 "${file}",
                 // Aqui você inclui o caminho para os outros arquivos .c ou .cpp
                 "${workspaceFolder}/glad.c",  //GLAD
+                "${workspaceFolder}/Common/src/Shader.cpp", //Common
                 "-o",
                 "${fileDirname}\\${fileBasenameNoExtension}.exe",
                 // Aqui você inclui o caminho para os diretórios que possuem as bibliotecas estáticas

@@ -21,8 +21,12 @@ class Shader
 public:
 	GLuint ID;
 	// Constructor generates the shader on the fly
-	Shader(const GLchar* vertexPath, const GLchar* fragmentPath)
+	Shader(const GLchar* vertexPath, const GLchar* fragmentPath, bool isFile)
 	{
+		if (!isFile) {
+			CompileShaders(vertexPath, fragmentPath);
+			return;
+		}
 		// 1. Retrieve the vertex/fragment source code from filePath
 		std::string vertexCode;
 		std::string fragmentCode;
@@ -51,15 +55,21 @@ public:
 		{
 			std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
 		}
-		const GLchar* vShaderCode = vertexCode.c_str();
-		const GLchar * fShaderCode = fragmentCode.c_str();
+		const GLchar* vShaderCode = (const GLchar*)vertexCode.c_str();
+		const GLchar * fShaderCode = (const GLchar*)fragmentCode.c_str();
+		
+		CompileShaders(vShaderCode, fShaderCode);
+	}
+
+	void CompileShaders(const GLchar* vShaderCode, const GLchar* fShaderCode){
 		// 2. Compile shaders
 		GLuint vertex, fragment;
 		GLint success;
 		GLchar infoLog[512];
 		// Vertex Shader
 		vertex = glCreateShader(GL_VERTEX_SHADER);
-		glShaderSource(vertex, 1, &vShaderCode, NULL);
+		// glShaderSource(vertex, 1, &vShaderCode, NULL);
+		glShaderSource(vertex, 1, &vShaderCode, 0);
 		glCompileShader(vertex);
 		// Print compile errors if any
 		glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
@@ -70,7 +80,8 @@ public:
 		}
 		// Fragment Shader
 		fragment = glCreateShader(GL_FRAGMENT_SHADER);
-		glShaderSource(fragment, 1, &fShaderCode, NULL);
+		// glShaderSource(fragment, 1, &fShaderCode, NULL);
+		glShaderSource(fragment, 1, &fShaderCode, 0);
 		glCompileShader(fragment);
 		// Print compile errors if any
 		glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
@@ -92,10 +103,12 @@ public:
 			std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
 		}
 		// Delete the shaders as they're linked into our program now and no longer necessery
+		glDetachShader(this->ID, vertex);
+		glDetachShader(this->ID, fragment);
 		glDeleteShader(vertex);
 		glDeleteShader(fragment);
-
 	}
+
 	// Uses the current shader
 	void Use()
 	{
