@@ -36,6 +36,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 int setupShader();
 int setupGeometry();
 int loadSimpleOBJ(string filePATH, int &nVertices);
+int loadSimplePLY(string filePath, int &nVertices);
 
 // Dimensões da janela (pode ser alterado em tempo de execução)
 const GLuint WIDTH = 1000, HEIGHT = 1000;
@@ -122,8 +123,9 @@ int main()
 	// Gerando um buffer simples, com a geometria de um triângulo
 	int nVertices;
 	int nVertices2;
-	GLuint VAO = loadSimpleOBJ("cube.obj", nVertices);
-	GLuint VAO2 = loadSimpleOBJ("cube2.obj", nVertices2);
+	GLuint VAO = loadSimplePLY("cube2.ply", nVertices);
+	// GLuint VAO2 = loadSimpleOBJ("cube2.obj", nVertices2);
+	// GLuint VAO2 = loadSimplePLY("cube2.ply", nVertices2);
 	// GLuint VAO = setupGeometry();
 	// int qntCubes;
 	// vector<int> vertices;
@@ -202,7 +204,7 @@ int main()
 		glDrawArrays(GL_POINTS, 0, nVertices);
 		glBindVertexArray(0);
 
-		glBindVertexArray(VAO2);
+		// glBindVertexArray(VAO2);
 		glDrawArrays(GL_TRIANGLES, 0, nVertices2);
 		glDrawArrays(GL_POINTS, 0, nVertices2);
 		glBindVertexArray(0);
@@ -212,7 +214,7 @@ int main()
 	}
 	// Pede pra OpenGL desalocar os buffers
 	glDeleteVertexArrays(1, &VAO);
-	glDeleteVertexArrays(1, &VAO2);
+	// glDeleteVertexArrays(1, &VAO2);
 	// Finaliza a execução da GLFW, limpando os recursos alocados por ela
 	glfwTerminate();
 	return 0;
@@ -540,3 +542,128 @@ int loadSimpleOBJ(string filePath, int &nVertices)
 
 	return VAO;
 }
+
+int loadSimplePLY(string filePath, int &nVertices)
+{
+    GLuint VBO, VAO;
+    vector<glm::vec3> vertices;
+    vector<GLfloat> vBuffer;
+
+    ifstream arqEntrada(filePath.c_str());
+    if (arqEntrada)
+    {
+        string line;
+
+        // lê até encontrar o cabeçalho
+        while (getline(arqEntrada, line))
+        {
+            if (line == "end_header") 
+                break;
+        }
+
+        // lê os vértices
+        while (getline(arqEntrada, line))
+        {
+            istringstream ssline(line);
+            glm::vec3 vertice;
+            ssline >> vertice.x >> vertice.y >> vertice.z;
+            vertices.push_back(vertice);
+        }
+
+        // lê as faces
+        // Nota: Assumindo que cada face começa com '4' seguido pelos índices dos vértices
+        arqEntrada.clear();
+        arqEntrada.seekg(0); // Voltar ao início do arquivo para ler faces
+
+        // Ignora o cabeçalho novamente
+        while (getline(arqEntrada, line))
+        {
+            if (line == "end_header") 
+                break; // Termina a leitura do cabeçalho
+        }
+
+        while (getline(arqEntrada, line))
+{
+    istringstream ssline(line);
+    int n;
+    ssline >> n; // numero de vértices que compõem a face
+
+    if (n == 4) { // só poligonais de 4 vértices (quads)
+        int idx[4];
+        for (int i = 0; i < n; i++) {
+            ssline >> idx[i];
+        }
+
+        // triangularizando a face
+        for (int i = 0; i < 2; i++) {
+            int v0 = idx[0];
+            int v1 = idx[i + 1];
+            int v2 = idx[i + 2];
+
+            for (int j = 0; j < 3; j++) {
+                int vertexIndex = (j == 0) ? v0 : (j == 1) ? v1 : v2;
+                glm::vec3 vec = vertices.at(vertexIndex);
+                // coordenadas
+                vBuffer.push_back(vec.x);
+                vBuffer.push_back(vec.y);
+                vBuffer.push_back(vec.z);
+                // cores
+                vBuffer.push_back(0.0f);
+                vBuffer.push_back(0.0f);
+                vBuffer.push_back(1.0f);
+                nVertices++;
+            }
+        }
+    }
+}
+
+		//Geração do identificador do VBO
+		glGenBuffers(1, &VBO);
+
+		//Faz a conexão (vincula) do buffer como um buffer de array
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+		//Envia os dados do array de floats para o buffer da OpenGl
+		// glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices.data(), GL_STATIC_DRAW);		
+		// glBufferData(GL_ARRAY_BUFFER, vertices.size(), vertices.data(), GL_STATIC_DRAW);		
+		glBufferData(GL_ARRAY_BUFFER, vBuffer.size()* sizeof(GLfloat), vBuffer.data(), GL_STATIC_DRAW);		
+
+		//Geração do identificador do VAO (Vertex Array Object)
+		glGenVertexArrays(1, &VAO);
+
+		// Vincula (bind) o VAO primeiro, e em seguida  conecta e seta o(s) buffer(s) de vértices
+		// e os ponteiros para os atributos 
+		glBindVertexArray(VAO);
+		
+		//Para cada atributo do vertice, criamos um "AttribPointer" (ponteiro para o atributo), indicando: 
+		// Localização no shader * (a localização dos atributos devem ser correspondentes no layout especificado no vertex shader)
+		// Numero de valores que o atributo tem (por ex, 3 coordenadas xyz) 
+		// Tipo do dado
+		// Se está normalizado (entre zero e um)
+		// Tamanho em bytes 
+		// Deslocamento a partir do byte zero 
+		
+		//Atributo posição (x, y, z)
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0);
+		glEnableVertexAttribArray(0);
+
+		//Atributo cor (r, g, b)
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
+		glEnableVertexAttribArray(1);
+
+
+		// Observe que isso é permitido, a chamada para glVertexAttribPointer registrou o VBO como o objeto de buffer de vértice 
+		// atualmente vinculado - para que depois possamos desvincular com segurança
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		// Desvincula o VAO (é uma boa prática desvincular qualquer buffer ou array para evitar bugs medonhos)
+		glBindVertexArray(0);
+	}
+	else
+	{
+		cout << "Erro ao tentar ler o arquivo " << filePath << endl;
+	}
+
+	return VAO;
+}
+
