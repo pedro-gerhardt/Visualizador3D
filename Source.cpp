@@ -123,7 +123,7 @@ int main()
 	// Gerando um buffer simples, com a geometria de um triângulo
 	int nVertices;
 	int nVertices2;
-	GLuint VAO = loadSimplePLY("C:\\Users\\muril\\Documents\\Visualizador3D\\cube2.ply", nVertices);
+	GLuint VAO = loadSimplePLY("cube2.ply", nVertices);
 	// GLuint VAO2 = loadSimpleOBJ("cube2.obj", nVertices2);
 	// GLuint VAO2 = loadSimplePLY("cube2.ply", nVertices2);
 	// GLuint VAO = setupGeometry();
