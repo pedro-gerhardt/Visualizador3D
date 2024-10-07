@@ -42,6 +42,8 @@ struct Object
 	glm::mat4 model;
 };
 
+int objSelecionado = 0; // Variável para armazenar o índice do objeto selecionado (0, 1 ou 2)
+
 const GLchar* vertexShaderSource = "#version 430\n"
 "layout (location = 0) in vec3 position;\n"
 "layout (location = 1) in vec3 color;\n"
@@ -140,11 +142,9 @@ int main()
 	int qntCubes = 3;
 	for (int i = 0; i < qntCubes; i++) {
 		Object obj;
-		obj.VAO = loadSimpleOBJ("cube" + to_string(i) + ".obj", obj.nVertices);
+		obj.VAO = loadSimpleOBJ("C:\\Users\\Patrick\\Desktop\\pg\\2024\\trabGA\\Visualizador3D\\cube" + to_string(i) + ".obj", obj.nVertices);
 		objetos.push_back(obj);
 	}
-
-	Object objSelecionado = objetos[0];
 
 	// Shader shader("phong.vs","phong.fs");
 	Shader shader(vertexShaderSource, fragmentShaderSource, false);
@@ -188,29 +188,36 @@ int main()
 
 		float angle = (GLfloat)glfwGetTime();
 
-		objSelecionado.model = glm::mat4(1);
-		if (rotateX)
-		{
-			objSelecionado.model = glm::rotate(objSelecionado.model, angle, glm::vec3(1.0f, 0.0f, 0.0f));
-		}
-		else if (rotateY)
-		{
-			objSelecionado.model = glm::rotate(objSelecionado.model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
-		}
-		else if (rotateZ)
-		{
-			objSelecionado.model = glm::rotate(objSelecionado.model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
-		}
-
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(objSelecionado.model));
-		
-		glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-		glUniformMatrix4fv(glGetUniformLocation(shader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
-				
-		shader.setVec3("cameraPos", cameraPos.x, cameraPos.y, cameraPos.z);
-
-		
 		for (int i = 0; i < qntCubes; i++) {
+			if (i == objSelecionado) {
+				// Aplicar transformações apenas ao cubo selecionado
+				objetos[i].model = glm::mat4(1); // Resetar a matriz
+
+				// Aplique as rotações conforme o eixo selecionado
+				if (rotateX)
+				{
+					objetos[i].model = glm::rotate(objetos[i].model, angle, glm::vec3(1.0f, 0.0f, 0.0f));
+				}
+				else if (rotateY)
+				{
+					objetos[i].model = glm::rotate(objetos[i].model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
+				}
+				else if (rotateZ)
+				{
+					objetos[i].model = glm::rotate(objetos[i].model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+				}
+			}
+
+			// Passe a matriz 'model' para o shader para cada cubo
+    	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(objetos[i].model));
+			
+			// Atualizar a view (câmera)
+			glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+			glUniformMatrix4fv(glGetUniformLocation(shader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
+			
+			shader.setVec3("cameraPos", cameraPos.x, cameraPos.y, cameraPos.z);
+		
+			// Renderizar todos os cubos
 			glBindVertexArray(objetos[i].VAO);
 			glDrawArrays(GL_TRIANGLES, 0, objetos[i].nVertices);
 		}
@@ -251,6 +258,13 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		rotateY = false;
 		rotateZ = true;
 	}
+
+	if (key == GLFW_KEY_1 && action == GLFW_PRESS)
+		objSelecionado = 0;
+	if (key == GLFW_KEY_2 && action == GLFW_PRESS)
+		objSelecionado = 1;
+	if (key == GLFW_KEY_3 && action == GLFW_PRESS)
+		objSelecionado = 2;
 
 	//Verifica a movimentação da câmera
 	float cameraSpeed = 0.05f;
