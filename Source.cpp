@@ -142,7 +142,7 @@ int main()
 	int qntCubes = 3;
 	for (int i = 0; i < qntCubes; i++) {
 		Object obj;
-		obj.VAO = loadSimpleOBJ("C:\\Users\\Patrick\\Desktop\\pg\\2024\\trabGA\\Visualizador3D\\cube" + to_string(i) + ".obj", obj.nVertices);
+		obj.VAO = loadSimpleOBJ("cube" + to_string(i) + ".obj", obj.nVertices);
 		objetos.push_back(obj);
 	}
 
