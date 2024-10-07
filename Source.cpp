@@ -40,8 +40,10 @@ struct Object
 	GLuint VAO; 
 	int nVertices;
 	glm::mat4 model;
+	float fatorEscala = 1.0f; // valor inicial de escala
 };
 
+vector<Object> objetos;
 int objSelecionado = 0; // Variável para armazenar o índice do objeto selecionado (0, 1 ou 2)
 
 const GLchar* vertexShaderSource = "#version 430\n"
@@ -137,8 +139,6 @@ int main()
 	glfwGetFramebufferSize(window, &width, &height);
 	glViewport(0, 0, width, height);
 
-
-	vector<Object> objetos;
 	int qntCubes = 3;
 	for (int i = 0; i < qntCubes; i++) {
 		Object obj;
@@ -206,6 +206,9 @@ int main()
 				{
 					objetos[i].model = glm::rotate(objetos[i].model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
 				}
+
+				// Aplicar a escala
+				objetos[i].model = glm::scale(objetos[i].model, glm::vec3(objetos[i].fatorEscala, objetos[i].fatorEscala, objetos[i].fatorEscala));
 			}
 
 			// Passe a matriz 'model' para o shader para cada cubo
@@ -285,6 +288,14 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		if ((key == GLFW_KEY_D || key == GLFW_KEY_RIGHT))
 		{
 			cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		}
+		if (key == GLFW_KEY_Q)
+		{
+			objetos[objSelecionado].fatorEscala += 0.1f;
+		}
+		if (key == GLFW_KEY_E)
+		{
+			objetos[objSelecionado].fatorEscala -= 0.1f;
 		}
 	}
 }
