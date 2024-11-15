@@ -3,21 +3,21 @@
  *  Parser do arquivo .obj: a leitura pode ser feita utilizando a biblioteca Assimp (Asset Importer) ou implementada diretamente em C++ 
    * vértices e faces: apenas triângulos  
    * Arquivos que possuam normais e coordenadas de textura (vn e vt) 
- -  Parser do arquivo .ply: a leitura pode ser feita utilizando a biblioteca Assimp (Asset Importer) ou implementada diretamente em C++ 
-   - vértices e faces: apenas triângulos  
-   - Arquivos que possuam normais e coordenadas de textura (vn e vt) 
+ *  Parser do arquivo .ply: a leitura pode ser feita utilizando a biblioteca Assimp (Asset Importer) ou implementada diretamente em C++ 
+   * vértices e faces: apenas triângulos  
+   * Arquivos que possuam normais e coordenadas de textura (vn e vt) 
  *  Parser dos arquivos com o código dos shaders (nossa classe Shader ou equivalente) 
  *  Correta criação e utilização dos buffers 
    * VAO, VBO(s) e EBO (este último, opcional) 
- -  Controle do modelo 3D (com input de teclado e/ou mouse): 
-   - Seleção dos objetos 
-   - Rotação em x, y, e z do objeto selecionado 
-   - Translação em x, y e z do objeto selecionado 
-   - Escala (pode ser o mesmo fator de escala nos 3 eixos para manter a proporção) do objeto selecionado 
+ *  Controle do modelo 3D (com input de teclado e/ou mouse): 
+   * Seleção dos objetos 
+   * Rotação em x, y, e z do objeto selecionado 
+   * Translação em x, y e z do objeto selecionado 
+   * Escala (pode ser o mesmo fator de escala nos 3 eixos para manter a proporção) do objeto selecionado 
  *  Controle de câmera em primeira pessoa (com input de teclado e/ou mouse) 
  *  Iluminação com o modelo de Phong com uma fonte de luz pontual 
    * Propriedades da superfície dos objetos podem ser fornecidas manualmente 
- -  O programa deve permitir a leitura e visualização de mais de um objeto na cena
+ *  O programa deve permitir a leitura e visualização de mais de um objeto na cena
 
 extras:
  - parser vertices e faces .obj:
