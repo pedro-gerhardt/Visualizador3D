@@ -5,6 +5,7 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <map>
 
 using namespace std;
 
@@ -23,8 +24,9 @@ using namespace std;
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 
-int loadSimpleOBJ(string filePATH, int &nVertices);
+map<GLuint, int> loadSimpleOBJ(string filePATH);
 int loadSimplePLY(string filePath, int &nVertices);
+GLuint configureVertexAndBuffer(vector <GLfloat> vBuffer, int &nVertices);
 
 // Dimensões da janela (pode ser alterado em tempo de execução)
 const GLuint WIDTH = 2000, HEIGHT = 1000;
@@ -36,11 +38,16 @@ glm::vec3 cameraPos = glm::vec3(0.0f,0.0f,3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f,0.0,-1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f,1.0f,0.0f);
 
-struct Object
+struct Mesh 
 {
 	GLuint VAO; 
 	int nVertices;
 	glm::mat4 model;
+};
+
+struct Object
+{
+	vector<Mesh> meshes;
 	float fatorEscala = 1.0f; // valor inicial de escala
 	float translacaoX = 0.0f;
 	float translacaoY = 0.0f; 
@@ -143,10 +150,18 @@ int main()
 	glfwGetFramebufferSize(window, &width, &height);
 	glViewport(0, 0, width, height);
 
-	int qntCubes = 3;
+	int qntCubes = 1;
 	for (int i = 0; i < qntCubes; i++) {
 		Object obj;
-		obj.VAO = loadSimplePLY("C:\\Users\\Patrick\\Desktop\\pg\\2024\\trabGA\\Visualizador3D\\cube" + to_string(i) + ".ply", obj.nVertices);
+		map<GLuint, int> objs = loadSimpleOBJ("Nave" + to_string(i) + ".obj");
+		for (auto const& [key, val] : objs)
+		{
+			Mesh mesh;
+			mesh.VAO = key;
+			mesh.nVertices = val;
+			mesh.model = glm::mat4(1);
+			obj.meshes.push_back(mesh);
+		}
 		objetos.push_back(obj);
 	}
 
@@ -192,52 +207,59 @@ int main()
 
 		float angle = (GLfloat)glfwGetTime();
 
-		for (int i = 0; i < qntCubes; i++) {
+		for (int i = 0; i < objetos.size(); i++) {
 			if (i == objSelecionado) {
-				// Aplicar transformações apenas ao cubo selecionado
-				objetos[i].model = glm::mat4(1); // Resetar a matriz
+				for (int m = 0; m < objetos[objSelecionado].meshes.size(); m++) {
+					// Aplicar transformações apenas ao cubo selecionado
+					objetos[objSelecionado].meshes[m].model = glm::mat4(1); // Resetar a matriz
 
-				// Aplique as rotações conforme o eixo selecionado
-				if (rotateX)
-				{
-					objetos[i].model = glm::rotate(objetos[i].model, angle, glm::vec3(1.0f, 0.0f, 0.0f));
-				}
-				else if (rotateY)
-				{
-					objetos[i].model = glm::rotate(objetos[i].model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
-				}
-				else if (rotateZ)
-				{
-					objetos[i].model = glm::rotate(objetos[i].model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
-				}
+					// Aplique as rotações conforme o eixo selecionado
+					if (rotateX)
+					{
+						objetos[objSelecionado].meshes[m].model = glm::rotate(objetos[objSelecionado].meshes[m].model, angle, glm::vec3(1.0f, 0.0f, 0.0f));
+					}
+					else if (rotateY)
+					{
+						objetos[objSelecionado].meshes[m].model = glm::rotate(objetos[objSelecionado].meshes[m].model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
+					}
+					else if (rotateZ)
+					{
+						objetos[objSelecionado].meshes[m].model = glm::rotate(objetos[objSelecionado].meshes[m].model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+					}
 
-				// Aplicar a escala
-				objetos[i].model = glm::scale(objetos[i].model, glm::vec3(objetos[i].fatorEscala, objetos[i].fatorEscala, objetos[i].fatorEscala));
+					// Aplicar a escala
+					objetos[objSelecionado].meshes[m].model = glm::scale(objetos[objSelecionado].meshes[m].model, glm::vec3(objetos[i].fatorEscala, objetos[i].fatorEscala, objetos[i].fatorEscala));
 
-				// Aplicar a translação
-				objetos[i].model = glm::translate(objetos[i].model, glm::vec3(objetos[i].translacaoX, objetos[i].translacaoY, objetos[i].translacaoZ));
+					// Aplicar a translação
+					objetos[objSelecionado].meshes[m].model = glm::translate(objetos[objSelecionado].meshes[m].model, glm::vec3(objetos[i].translacaoX, objetos[i].translacaoY, objetos[i].translacaoZ));
+				}
 			}
 
-			// Passe a matriz 'model' para o shader para cada cubo
-    	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(objetos[i].model));
+			for (int m = 0; m < objetos[i].meshes.size(); m++) {
+
+				// Passe a matriz 'model' para o shader para cada cubo
+				glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(objetos[i].meshes[m].model));
+				
+				// Atualizar a view (câmera)
+				glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+				glUniformMatrix4fv(glGetUniformLocation(shader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
+				
+				shader.setVec3("cameraPos", cameraPos.x, cameraPos.y, cameraPos.z);
 			
-			// Atualizar a view (câmera)
-			glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-			glUniformMatrix4fv(glGetUniformLocation(shader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
-			
-			shader.setVec3("cameraPos", cameraPos.x, cameraPos.y, cameraPos.z);
-		
-			// Renderizar todos os cubos
-			glBindVertexArray(objetos[i].VAO);
-			glDrawArrays(GL_TRIANGLES, 0, objetos[i].nVertices);
+				// Renderizar todos os cubos
+				glBindVertexArray(objetos[i].meshes[m].VAO);
+				glDrawArrays(GL_TRIANGLES, 0, objetos[i].meshes[m].nVertices);
+			}
 		}
 
 		glfwSwapBuffers(window);
 	}
 
 	// glDeleteVertexArrays(1, &objSelecionado.VAO);
-	for (int i = 0; i < qntCubes; i++) {
-		glDeleteVertexArrays(1, &objetos[i].VAO);
+	for (int i = 0; i < objetos.size(); i++) {
+		for (int m = 0; m < objetos[i].meshes.size(); m++) {
+			glDeleteVertexArrays(1, &objetos[i].meshes[m].VAO);
+		}
 	}
 	glfwTerminate();
 	return 0;
@@ -331,14 +353,17 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	}
 }
 
-int loadSimpleOBJ(string filePath, int &nVertices)
+map<GLuint, int> loadSimpleOBJ(string filePath)
 {
-	GLuint VBO, VAO;
+	map<GLuint, int> objects;
+
 	vector <glm::vec3> vertices;
 	vector <glm::vec2> texCoords;
 	vector <glm::vec3> normals;
-
 	vector <GLfloat> vBuffer;
+	int nVertices;
+	cout << vBuffer.max_size() << endl;
+
 	glm::vec3 color = glm::vec3(1.0, 0.0, 0.0);
 
 	ifstream arqEntrada;
@@ -352,19 +377,34 @@ int loadSimpleOBJ(string filePath, int &nVertices)
 			istringstream ssline(line);
 			string word;
 			ssline >> word;
-			if (word == "v")
+			if (word == "o") 
+			{
+				if (!vBuffer.empty()) {
+					GLuint vao = configureVertexAndBuffer(vBuffer, nVertices);
+					objects[vao] = nVertices;
+					cout << "qtdObjs: " << objects.size() << endl;
+
+					vBuffer.clear();
+				}
+			}
+			else if (word == "g")
+			{
+				// load usemtl
+				vBuffer.clear();
+			}
+			else if (word == "v")
 			{
 				glm::vec3 vertice;
 				ssline >> vertice.x >> vertice.y >> vertice.z;
 				vertices.push_back(vertice);
 			}
-			if (word == "vt")
+			else if (word == "vt")
 			{
 				glm::vec2 vt;
 				ssline >> vt.s >> vt.t;
 				texCoords.push_back(vt);
 			}
-			if (word == "vn")
+			else if (word == "vn")
 			{
 				glm::vec3 normal;
 				ssline >> normal.x >> normal.y >> normal.z;
@@ -404,44 +444,54 @@ int loadSimpleOBJ(string filePath, int &nVertices)
 		}
 
 		arqEntrada.close();
-		
-		glGenBuffers(1, &VBO);
 
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	
-		glBufferData(GL_ARRAY_BUFFER, vBuffer.size()* sizeof(GLfloat), vBuffer.data(), GL_STATIC_DRAW);		
+		GLuint vao = configureVertexAndBuffer(vBuffer, nVertices);
+		objects[vao] = nVertices;
 
-		glGenVertexArrays(1, &VAO);
-
-		glBindVertexArray(VAO);
-		
-		//Atributo posição (x, y, z)
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)0);
-		glEnableVertexAttribArray(0);
-
-		//Atributo cor (r, g, b)
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
-		glEnableVertexAttribArray(1);
-
-		//Atributo coordenada de textura - s, t
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)(6*sizeof(GLfloat)));
-		glEnableVertexAttribArray(2);
-
-		//Atributo vetor normal - x, y, z
-		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)(8*sizeof(GLfloat)));
-		glEnableVertexAttribArray(3);
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-		glBindVertexArray(0);
-		nVertices = vBuffer.size() / 2;
-		return VAO;
+		return objects;
 	}
 	else
 	{
 		cout << "Erro ao tentar ler o arquivo " << filePath << endl;
-		return -1;
+		return objects;
 	}
+}
+
+GLuint configureVertexAndBuffer(vector <GLfloat> vBuffer, int &nVertices) {
+	GLuint VBO, VAO;
+
+	glGenBuffers(1, &VBO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+	glBufferData(GL_ARRAY_BUFFER, vBuffer.size()* sizeof(GLfloat), vBuffer.data(), GL_STATIC_DRAW);		
+
+	glGenVertexArrays(1, &VAO);
+
+	glBindVertexArray(VAO);
+	
+	//Atributo posição (x, y, z)
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(0);
+
+	//Atributo cor (r, g, b)
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);
+
+	//Atributo coordenada de textura - s, t
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)(6*sizeof(GLfloat)));
+	glEnableVertexAttribArray(2);
+
+	//Atributo vetor normal - x, y, z
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)(8*sizeof(GLfloat)));
+	glEnableVertexAttribArray(3);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glBindVertexArray(0);
+	nVertices = vBuffer.size() / 2;
+
+	return VAO;
 }
 
 int loadSimplePLY(string filePath, int &nVertices)
