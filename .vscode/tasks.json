@@ -11,11 +11,13 @@
                 "-I${workspaceFolder}/Dependencies/GLAD/include", //GLAD
                 "-I${workspaceFolder}/Dependencies/glfw-3.4.bin.WIN64/include", //GLFW
                 "-I${workspaceFolder}/Dependencies/glm", //GLM
+                "-I${workspaceFolder}/Dependencies/stb_image", //GLM
                 "-I${workspaceFolder}/Common/include", //Common
                 "${file}",
                 // Aqui você inclui o caminho para os outros arquivos .c ou .cpp
                 "${workspaceFolder}/glad.c",  //GLAD
                 "${workspaceFolder}/Common/src/Shader.cpp", //Common
+                "${workspaceFolder}/Dependencies/stb_image/stb_image.cpp", //Common
                 "-o",
                 "${fileDirname}\\${fileBasenameNoExtension}.exe",
                 // Aqui você inclui o caminho para os diretórios que possuem as bibliotecas estáticas

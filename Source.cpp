@@ -22,6 +22,8 @@ using namespace std;
 
 #include "Shader.h"
 
+//STB_IMAGE
+#include <stb_image.h>
 
 struct Material
 {
@@ -42,6 +44,7 @@ struct Mesh
 	int nVertices;
 	glm::mat4 model;
 	Material material;
+	GLuint texID;
 };
 
 struct Object
@@ -69,6 +72,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 vector<Mesh> loadSimpleOBJ(string filePATH);
 int loadSimplePLY(string filePath, int &nVertices);
 GLuint configureVertexAndBuffer(vector <GLfloat> vBuffer, int &nVertices);
+GLuint loadTexture(string filePath, int &width, int &height);
 
 // Dimensões da janela (pode ser alterado em tempo de execução)
 const GLuint WIDTH = 2000, HEIGHT = 1000;
@@ -104,7 +108,7 @@ const GLchar* vertexShaderSource = "#version 430\n"
 "	//...pode ter mais linhas de código aqui!\n"
 "	gl_Position = projection * view * model * vec4(position, 1.0);\n"
 "	finalColor = color;\n"
-"    texCoord = texc;\n"
+"    texCoord = vec2(texc.s, 1 - texc.t);\n"
 "    fragPos = vec3(model * vec4(position, 1.0));\n"
 "    scaledNormal = vec3(model * vec4(normal, 1.0));\n"
 "}\n\0";
@@ -124,6 +128,7 @@ const GLchar* fragmentShaderSource = "#version 430\n"
 "uniform vec3 cameraPos;\n"
 "\n"
 "out vec4 color;\n"
+"uniform sampler2D texBuffer;\n"
 "\n"
 "void main()\n"
 "{\n"
@@ -142,7 +147,8 @@ const GLchar* fragmentShaderSource = "#version 430\n"
 "    spec = pow(spec,ns);\n"
 "    specular = ks * spec * specularColor;\n"
 "\n"
-"    vec3 result = (ambient + diffuse) * finalColor + specular;\n"
+"  	 vec4 texColor = texture(texBuffer,texCoord);\n"
+"    vec3 result = (ambient + diffuse) * vec3(texColor) + specular;\n"
 "\n"
 "    color = vec4(result,1.0);\n"
 "}\n\0";
@@ -272,6 +278,7 @@ int main()
 			
 				// Renderizar todos os cubos
 				glBindVertexArray(objetos[i].meshes[m].VAO);
+				glBindTexture(GL_TEXTURE_2D, objetos[i].meshes[m].texID);
 				glDrawArrays(GL_TRIANGLES, 0, objetos[i].meshes[m].nVertices);
 			}
 		}
@@ -484,12 +491,15 @@ vector<Mesh> loadSimpleOBJ(string filePath)
 			{
 				if (!vBuffer.empty()) {
 					GLuint vao = configureVertexAndBuffer(vBuffer, nVertices);
+					int texWidth, texHeight;
 					Mesh mesh = {
 						.VAO = vao,
 						.nVertices = nVertices,
 						.model = glm::mat4(1),
-						.material = materials[currentName]
+						.material = materials[currentName],
+						.texID = loadTexture("texture_blue.png", texWidth, texHeight), 
 					};
+
 					meshes.push_back(mesh);
 					vBuffer.clear();
 				}
@@ -701,4 +711,48 @@ int loadSimplePLY(string filePath, int &nVertices)
     }
 
     return VAO;
+}
+
+GLuint loadTexture(string filePath, int &width, int &height)
+{
+	GLuint texID; // id da textura a ser carregada
+
+	// Gera o identificador da textura na memória
+	glGenTextures(1, &texID);
+	glBindTexture(GL_TEXTURE_2D, texID);
+
+	// Ajuste dos parâmetros de wrapping e filtering
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// Carregamento da imagem usando a função stbi_load da biblioteca stb_image
+	int nrChannels;
+
+	unsigned char *data = stbi_load(filePath.c_str(), &width, &height, &nrChannels, 0);
+
+	if (data)
+	{
+		if (nrChannels == 3) // jpg, bmp
+		{
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		}
+		else // assume que é 4 canais png
+		{
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		}
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Failed to load texture " << filePath << std::endl;
+	}
+
+	stbi_image_free(data);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	return texID;
 }

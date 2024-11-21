@@ -4,7 +4,7 @@
     * tratar os múltiplos grupos de malha como um único objeto no momento de seleção e de rotação
     * cada objeto ou grupo (mesh) possui seu índice de textura e suas propriedades do material (ka, ks e kd), que devem ser 
 usados no shader de iluminação 
-    - texturas?
+    * implementar texturas
 
 * Ter pelo menos 1 fonte de luz, iluminação de Phong  
     * Acrescentar os coeficientes ka, ks e kd do arquivo de materiais (.mtl) 
