@@ -1,34 +1,20 @@
-Para objetos .obj (Pedro):
-    - Ler mais de um OBJ  
-        * já triangularizado, com normais e coordenadas de texturas 
-        * o objeto pode possuir um ou mais grupos de malha (mesh), sendo que cada grupo é desenhado separadamente 
-        * tratar os múltiplos grupos de malha como um único objeto no momento de seleção e de rotação
-        - cada objeto ou grupo (mesh) possui seu índice de textura e suas propriedades do material (ka, ks e kd), que devem ser 
-    usados no shader de iluminação 
+- Ler mais de um OBJ  
+    * já triangularizado, com normais e coordenadas de texturas 
+    * o objeto pode possuir um ou mais grupos de malha (mesh), sendo que cada grupo é desenhado separadamente 
+    * tratar os múltiplos grupos de malha como um único objeto no momento de seleção e de rotação
+    * cada objeto ou grupo (mesh) possui seu índice de textura e suas propriedades do material (ka, ks e kd), que devem ser 
+usados no shader de iluminação 
+    - texturas?
 
-    - Ter pelo menos 1 fonte de luz, iluminação de Phong  
-        - Acrescentar os coeficientes ka, ks e kd do arquivo de materiais (.mtl) 
-        - Preferencialmente, deixar todos os coeficientes de iluminação parametrizáveis (intensidade das fontes de luz, 
-    coeficiente da especular) 
-
-
-Para objetos .ply (Murilo):
-    - Ler mais de um OBJ  
-        * já triangularizado, com normais e coordenadas de texturas 
-        - o objeto pode possuir um ou mais grupos de malha (mesh), sendo que cada grupo é desenhado separadamente 
-        - cada objeto ou grupo (mesh) possui seu índice de textura e suas propriedades do material (ka, ks e kd), que devem ser 
-    usados no shader de iluminação 
-
-    - Ter pelo menos 1 fonte de luz, iluminação de Phong  
-        - Acrescentar os coeficientes ka, ks e kd do arquivo de materiais (.mtl) 
-        - Preferencialmente, deixar todos os coeficientes de iluminação parametrizáveis (intensidade das fontes de luz, 
-    coeficiente da especular) 
+* Ter pelo menos 1 fonte de luz, iluminação de Phong  
+    * Acrescentar os coeficientes ka, ks e kd do arquivo de materiais (.mtl) 
+    * Preferencialmente, deixar todos os coeficientes de iluminação parametrizáveis (intensidade das fontes de luz, 
+coeficiente da especular) 
 
 * Controle de câmera por teclado e/ou mouse, provendo navegabilidade para a cena. 
 
 * Seleção dos objetos via teclado e/ou mouse, permitindo a aplicação de operações geométricas (rotação, translação e escala uniforme)  
 
-(Patrick)
 - Ter pelo menos 1 objeto que movimente-se na cena utilizando a trajetória de uma curva paramétrica 
 
 Para a criação da cena, recomenda-se fazer uso de um arquivo de configuração (formato a ser definido pelo estudante, 

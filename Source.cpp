@@ -22,9 +22,51 @@ using namespace std;
 
 #include "Shader.h"
 
+
+struct Material
+{
+	string name;
+	float ns;
+	glm::vec3 ka;
+	glm::vec3 kd;
+	glm::vec3 ks;
+	glm::vec3 ke;
+	float ni;
+	float d;
+	int illum;
+};
+
+struct Mesh 
+{
+	GLuint VAO; 
+	int nVertices;
+	glm::mat4 model;
+	Material material;
+};
+
+struct Object
+{
+	vector<Mesh> meshes;
+	float fatorEscala = 1.0f; // valor inicial de escala
+	float translacaoX = 0.0f;
+	float translacaoY = 0.0f; 
+	float translacaoZ = 0.0f; 
+};
+
+// Propriedades parametrizáveis que deverão ser buscadas do arquivo de configuração:
+float ka = 0.2;
+float ks = 0.5;
+float kd = 0.5;
+glm::vec3 lightPos = glm::vec3(-2.0f, 10.0f, 3.0f);
+glm::vec3 ambientDefaultColor = glm::vec3(1.0, 1.0, 1.0);
+glm::vec3 specularDefaultColor = glm::vec3(1.0, 1.0, 1.0);
+glm::vec3 diffuseDefaultColor = glm::vec3(1.0, 1.0, 1.0);
+float defaultNs = 10.0f;
+
+
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 
-map<GLuint, int> loadSimpleOBJ(string filePATH);
+vector<Mesh> loadSimpleOBJ(string filePATH);
 int loadSimplePLY(string filePath, int &nVertices);
 GLuint configureVertexAndBuffer(vector <GLfloat> vBuffer, int &nVertices);
 
@@ -37,22 +79,6 @@ bool rotateX=false, rotateY=false, rotateZ=false;
 glm::vec3 cameraPos = glm::vec3(0.0f,0.0f,3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f,0.0,-1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f,1.0f,0.0f);
-
-struct Mesh 
-{
-	GLuint VAO; 
-	int nVertices;
-	glm::mat4 model;
-};
-
-struct Object
-{
-	vector<Mesh> meshes;
-	float fatorEscala = 1.0f; // valor inicial de escala
-	float translacaoX = 0.0f;
-	float translacaoY = 0.0f; 
-	float translacaoZ = 0.0f; 
-};
 
 vector<Object> objetos;
 int objSelecionado = 0; // Variável para armazenar o índice do objeto selecionado (0, 1 ou 2)
@@ -91,9 +117,9 @@ const GLchar* fragmentShaderSource = "#version 430\n"
 "in vec3 scaledNormal;\n"
 "in vec3 fragPos;\n"
 "\n"
-"uniform float ka, kd, ks, q;\n"
+"uniform float ka, kd, ks, ns;\n"
 "\n"
-"uniform vec3 lightPos, lightColor;\n"
+"uniform vec3 lightPos, ambientColor, diffuseColor, specularColor;\n"
 "\n"
 "uniform vec3 cameraPos;\n"
 "\n"
@@ -101,20 +127,20 @@ const GLchar* fragmentShaderSource = "#version 430\n"
 "\n"
 "void main()\n"
 "{\n"
-"    vec3 ambient = ka * lightColor;\n"
+"    vec3 ambient = ka * ambientColor;\n"
 "\n"
 "    vec3 diffuse;\n"
 "    vec3 N = normalize(scaledNormal);\n"
 "    vec3 L = normalize(lightPos - fragPos);\n"
 "    float diff = max(dot(N,L),0.0);\n"
-"    diffuse = kd * diff * lightColor;\n"
+"    diffuse = kd * diff * diffuseColor;\n"
 "\n"
 "    vec3 specular;\n"
 "    vec3 R = normalize(reflect(-L,N));\n"
 "    vec3 V = normalize(cameraPos - fragPos);\n"
 "    float spec = max(dot(R,V),0.0);\n"
-"    spec = pow(spec,q);\n"
-"    specular = ks * spec * lightColor;\n"
+"    spec = pow(spec,ns);\n"
+"    specular = ks * spec * specularColor;\n"
 "\n"
 "    vec3 result = (ambient + diffuse) * finalColor + specular;\n"
 "\n"
@@ -153,15 +179,8 @@ int main()
 	int qntCubes = 1;
 	for (int i = 0; i < qntCubes; i++) {
 		Object obj;
-		map<GLuint, int> objs = loadSimpleOBJ("Nave" + to_string(i) + ".obj");
-		for (auto const& [key, val] : objs)
-		{
-			Mesh mesh;
-			mesh.VAO = key;
-			mesh.nVertices = val;
-			mesh.model = glm::mat4(1);
-			obj.meshes.push_back(mesh);
-		}
+		vector<Mesh> meshes = loadSimpleOBJ("Nave" + to_string(i) + ".obj");
+		obj.meshes = meshes;
 		objetos.push_back(obj);
 	}
 
@@ -185,15 +204,10 @@ int main()
 
 	glEnable(GL_DEPTH_TEST);
 
-	//Propriedades da superfície
-	shader.setFloat("ka", 0.2);
-	shader.setFloat("ks", 0.5);
-	shader.setFloat("kd", 0.5);
-	shader.setFloat("q", 10.0);
-
-	//Propriedades da fonte de luz
-	shader.setVec3("lightPos", -2.0, 10.0, 3.0);
-	shader.setVec3("lightColor", 1.0, 1.0, 1.0);
+	shader.setFloat("ka", ka);
+	shader.setFloat("ks", ks);
+	shader.setFloat("kd", kd);
+	shader.setVec3("lightPos", lightPos.x, lightPos.y, lightPos.z);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -208,8 +222,21 @@ int main()
 		float angle = (GLfloat)glfwGetTime();
 
 		for (int i = 0; i < objetos.size(); i++) {
-			if (i == objSelecionado) {
-				for (int m = 0; m < objetos[objSelecionado].meshes.size(); m++) {
+			for (int m = 0; m < objetos[i].meshes.size(); m++) {
+				if (objetos[i].meshes[m].material.name.empty()) {
+					shader.setVec3("ambientColor", ambientDefaultColor.r, ambientDefaultColor.g, ambientDefaultColor.b);
+					shader.setVec3("specularColor", specularDefaultColor.r, specularDefaultColor.g, specularDefaultColor.b);
+					shader.setVec3("diffuseColor", diffuseDefaultColor.r, diffuseDefaultColor.g, diffuseDefaultColor.b);
+					shader.setFloat("ns", defaultNs);
+				}
+				else {
+					shader.setVec3("ambientColor", objetos[i].meshes[m].material.ka.x, objetos[i].meshes[m].material.ka.y, objetos[i].meshes[m].material.ka.z);
+					shader.setVec3("specularColor", objetos[i].meshes[m].material.ks.x, objetos[i].meshes[m].material.ks.y, objetos[i].meshes[m].material.ks.z);
+					shader.setVec3("diffuseColor", objetos[i].meshes[m].material.kd.x, objetos[i].meshes[m].material.kd.y, objetos[i].meshes[m].material.kd.z);
+					shader.setFloat("ns", objetos[i].meshes[m].material.ns);
+				}
+
+				if (i == objSelecionado) {
 					// Aplicar transformações apenas ao cubo selecionado
 					objetos[objSelecionado].meshes[m].model = glm::mat4(1); // Resetar a matriz
 
@@ -233,9 +260,6 @@ int main()
 					// Aplicar a translação
 					objetos[objSelecionado].meshes[m].model = glm::translate(objetos[objSelecionado].meshes[m].model, glm::vec3(objetos[i].translacaoX, objetos[i].translacaoY, objetos[i].translacaoZ));
 				}
-			}
-
-			for (int m = 0; m < objetos[i].meshes.size(); m++) {
 
 				// Passe a matriz 'model' para o shader para cada cubo
 				glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(objetos[i].meshes[m].model));
@@ -353,18 +377,97 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	}
 }
 
-map<GLuint, int> loadSimpleOBJ(string filePath)
+
+map<string, Material> loadMtlLib(string mtllib) {
+	string currentName;
+	map<string, Material> materials;
+	ifstream arqEntrada;
+	arqEntrada.open(mtllib.c_str());
+	if (arqEntrada.is_open())
+	{
+		string line;
+		while (getline(arqEntrada, line))
+		{
+			istringstream ssline(line);
+			string word;
+			ssline >> word;
+			if (word == "newmtl") 
+			{
+				Material mat;
+				ssline >> currentName;
+				mat.name = currentName;
+				materials[currentName] = mat;
+			}
+			else if (word == "Ns")
+			{
+				string ns;
+				ssline >> ns;
+				materials[currentName].ns = stof(ns);
+			} 
+			else if (word == "Ka")
+			{
+				glm::vec3 ka;
+				ssline >> ka.x >> ka.y >> ka.z;
+				materials[currentName].ka = ka;
+			} 
+			else if (word == "Kd")
+			{
+				glm::vec3 kd;
+				ssline >> kd.x >> kd.y >> kd.z;
+				materials[currentName].kd = kd;
+			} 
+			else if (word == "Ks")
+			{
+				glm::vec3 ks;
+				ssline >> ks.x >> ks.y >> ks.z;
+				materials[currentName].ks = ks;
+			} 
+			else if (word == "Ke")
+			{
+				glm::vec3 ke;
+				ssline >> ke.x >> ke.y >> ke.z;
+				materials[currentName].ke = ke;
+			} 
+			else if (word == "Ni")
+			{
+				string ni;
+				ssline >> ni;
+				materials[currentName].ni = stof(ni);
+			} 
+			else if (word == "d")
+			{
+				string d;
+				ssline >> d;
+				materials[currentName].d = stof(d);
+			} 
+			else if (word == "illum")
+			{
+				string illum;
+				ssline >> illum;
+				materials[currentName].illum = stoi(illum);
+			} 
+		}
+	}
+	else
+	{
+		cout << "Erro ao tentar ler o arquivo " << mtllib << endl;
+	}
+	return materials;
+}
+
+vector<Mesh> loadSimpleOBJ(string filePath)
 {
-	map<GLuint, int> objects;
+	string currentName;
+	map<string, Material> materials;
+	vector<Mesh> meshes;
 
 	vector <glm::vec3> vertices;
 	vector <glm::vec2> texCoords;
 	vector <glm::vec3> normals;
 	vector <GLfloat> vBuffer;
 	int nVertices;
-	cout << vBuffer.max_size() << endl;
 
-	glm::vec3 color = glm::vec3(1.0, 0.0, 0.0);
+	glm::vec3 color = glm::vec3(1.0, 1.0, 1.0);
 
 	ifstream arqEntrada;
 
@@ -381,16 +484,27 @@ map<GLuint, int> loadSimpleOBJ(string filePath)
 			{
 				if (!vBuffer.empty()) {
 					GLuint vao = configureVertexAndBuffer(vBuffer, nVertices);
-					objects[vao] = nVertices;
-					cout << "qtdObjs: " << objects.size() << endl;
-
+					Mesh mesh = {
+						.VAO = vao,
+						.nVertices = nVertices,
+						.model = glm::mat4(1),
+						.material = materials[currentName]
+					};
+					meshes.push_back(mesh);
 					vBuffer.clear();
 				}
 			}
 			else if (word == "g")
 			{
-				// load usemtl
 				vBuffer.clear();
+			}
+			else if (word == "mtllib") {
+				string mtllib;
+				ssline >> mtllib;
+				materials = loadMtlLib(mtllib);
+			}
+			else if (word == "usemtl") {
+				ssline >> currentName;
 			}
 			else if (word == "v")
 			{
@@ -446,15 +560,21 @@ map<GLuint, int> loadSimpleOBJ(string filePath)
 		arqEntrada.close();
 
 		GLuint vao = configureVertexAndBuffer(vBuffer, nVertices);
-		objects[vao] = nVertices;
-
-		return objects;
+		Mesh mesh = {
+			.VAO = vao,
+			.nVertices = nVertices,
+			.model = glm::mat4(1),
+			.material = materials[currentName]
+		};
+		meshes.push_back(mesh);
+		vBuffer.clear();
 	}
 	else
 	{
 		cout << "Erro ao tentar ler o arquivo " << filePath << endl;
-		return objects;
 	}
+
+	return meshes;
 }
 
 GLuint configureVertexAndBuffer(vector <GLfloat> vBuffer, int &nVertices) {
