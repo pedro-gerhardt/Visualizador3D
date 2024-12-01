@@ -7,6 +7,10 @@
 #include <sstream>
 #include <map>
 
+#include <fstream>
+#include <json.hpp>
+
+using json = nlohmann::json;
 using namespace std;
 
 // GLAD
@@ -56,16 +60,10 @@ struct Object
 	float translacaoZ = 0.0f; 
 };
 
-// Propriedades parametrizáveis que deverão ser buscadas do arquivo de configuração:
-float ka = 0.2;
-float ks = 0.5;
-float kd = 0.5;
-glm::vec3 lightPos = glm::vec3(-2.0f, 10.0f, 3.0f);
-glm::vec3 ambientDefaultColor = glm::vec3(1.0, 1.0, 1.0);
-glm::vec3 specularDefaultColor = glm::vec3(1.0, 1.0, 1.0);
-glm::vec3 diffuseDefaultColor = glm::vec3(1.0, 1.0, 1.0);
-float defaultNs = 10.0f;
-
+// Propriedades parametrizáveis que são buscadas do arquivo de configuração:
+float ka, ks, kd, ns;
+glm::vec3 ambientColor, specularColor, diffuseColor, lightPos;
+glm::vec3 cameraPos, cameraFront, cameraUp;
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 
@@ -73,16 +71,12 @@ vector<Mesh> loadSimpleOBJ(string filePATH);
 int loadSimplePLY(string filePath, int &nVertices);
 GLuint configureVertexAndBuffer(vector <GLfloat> vBuffer, int &nVertices);
 GLuint loadTexture(string filePath, int &width, int &height);
+void loadConfiguration(const std::string& configPath);
 
 // Dimensões da janela (pode ser alterado em tempo de execução)
 const GLuint WIDTH = 2000, HEIGHT = 1000;
 
 bool rotateX=false, rotateY=false, rotateZ=false;
-
-//Variáveis globais da câmera
-glm::vec3 cameraPos = glm::vec3(0.0f,0.0f,3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f,0.0,-1.0f);
-glm::vec3 cameraUp = glm::vec3(0.0f,1.0f,0.0f);
 
 vector<Object> objetos;
 int objSelecionado = 0; // Variável para armazenar o índice do objeto selecionado (0, 1 ou 2)
@@ -182,13 +176,8 @@ int main()
 	glfwGetFramebufferSize(window, &width, &height);
 	glViewport(0, 0, width, height);
 
-	int qntCubes = 1;
-	for (int i = 0; i < qntCubes; i++) {
-		Object obj;
-		vector<Mesh> meshes = loadSimpleOBJ("Nave" + to_string(i) + ".obj");
-		obj.meshes = meshes;
-		objetos.push_back(obj);
-	}
+	// Carrega as configurações
+	loadConfiguration("config.json");
 
 	// Shader shader("phong.vs","phong.fs");
 	Shader shader(vertexShaderSource, fragmentShaderSource, false);
@@ -230,10 +219,10 @@ int main()
 		for (int i = 0; i < objetos.size(); i++) {
 			for (int m = 0; m < objetos[i].meshes.size(); m++) {
 				if (objetos[i].meshes[m].material.name.empty()) {
-					shader.setVec3("ambientColor", ambientDefaultColor.r, ambientDefaultColor.g, ambientDefaultColor.b);
-					shader.setVec3("specularColor", specularDefaultColor.r, specularDefaultColor.g, specularDefaultColor.b);
-					shader.setVec3("diffuseColor", diffuseDefaultColor.r, diffuseDefaultColor.g, diffuseDefaultColor.b);
-					shader.setFloat("ns", defaultNs);
+					shader.setVec3("ambientColor", ambientColor.r, ambientColor.g, ambientColor.b);
+					shader.setVec3("specularColor", specularColor.r, specularColor.g, specularColor.b);
+					shader.setVec3("diffuseColor", diffuseColor.r, diffuseColor.g, diffuseColor.b);
+					shader.setFloat("ns", ns);
 				}
 				else {
 					shader.setVec3("ambientColor", objetos[i].meshes[m].material.ka.x, objetos[i].meshes[m].material.ka.y, objetos[i].meshes[m].material.ka.z);
@@ -462,7 +451,7 @@ map<string, Material> loadMtlLib(string mtllib) {
 	return materials;
 }
 
-vector<Mesh> loadSimpleOBJ(string filePath)
+vector<Mesh> loadSimpleOBJ(string objFilePath, string textureFilePath)
 {
 	string currentName;
 	map<string, Material> materials;
@@ -478,7 +467,7 @@ vector<Mesh> loadSimpleOBJ(string filePath)
 
 	ifstream arqEntrada;
 
-	arqEntrada.open(filePath.c_str());
+	arqEntrada.open(objFilePath.c_str());
 	if (arqEntrada.is_open())
 	{
 		string line;
@@ -497,7 +486,7 @@ vector<Mesh> loadSimpleOBJ(string filePath)
 						.nVertices = nVertices,
 						.model = glm::mat4(1),
 						.material = materials[currentName],
-						.texID = loadTexture("texture_blue.png", texWidth, texHeight), 
+						.texID = loadTexture(textureFilePath, texWidth, texHeight), 
 					};
 
 					meshes.push_back(mesh);
@@ -581,7 +570,7 @@ vector<Mesh> loadSimpleOBJ(string filePath)
 	}
 	else
 	{
-		cout << "Erro ao tentar ler o arquivo " << filePath << endl;
+		cout << "Erro ao tentar ler o arquivo " << objFilePath << endl;
 	}
 
 	return meshes;
@@ -755,4 +744,83 @@ GLuint loadTexture(string filePath, int &width, int &height)
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	return texID;
+}
+
+void loadConfiguration(const std::string& configPath)
+{
+    std::ifstream configFile(configPath);
+    if (!configFile.is_open()) {
+        std::cerr << "Erro ao abrir o arquivo de configuração: " << configPath << std::endl;
+        return;
+    }
+
+	json config;
+    configFile >> config;
+
+	ka = config["materials"]["ka"];
+    kd = config["materials"]["kd"];
+    ks = config["materials"]["ks"];
+	ns = config["materials"]["ns"];
+	
+	ambientColor = glm::vec3(
+        config["materials"]["ambientColor"][0],
+        config["materials"]["ambientColor"][1],
+        config["materials"]["ambientColor"][2]
+    );
+    diffuseColor = glm::vec3(
+        config["materials"]["diffuseColor"][0],
+        config["materials"]["diffuseColor"][1],
+        config["materials"]["diffuseColor"][2]
+    );
+    specularColor = glm::vec3(
+        config["materials"]["specularColor"][0],
+        config["materials"]["specularColor"][1],
+        config["materials"]["specularColor"][2]
+    );
+
+    lightPos = glm::vec3(
+        config["light"]["position"][0],
+        config["light"]["position"][1],
+        config["light"]["position"][2]
+    );
+
+	cameraPos = glm::vec3(
+        config["camera"]["position"][0],
+        config["camera"]["position"][1],
+        config["camera"]["position"][2]
+    );
+    cameraFront = glm::vec3(
+        config["camera"]["front"][0],
+        config["camera"]["front"][1],
+        config["camera"]["front"][2]
+    );
+    cameraUp = glm::vec3(
+        config["camera"]["up"][0],
+        config["camera"]["up"][1],
+        config["camera"]["up"][2]
+    );
+
+	// lê os objetos do config file e aplica as transformações iniciais
+	for (const auto& obj : config["objects"]) {
+		Object newObj;
+		newObj.meshes = loadSimpleOBJ(obj["file"], obj["materialFile"]);
+
+		newObj.translacaoX = obj["transformations"]["translation"][0];
+		newObj.translacaoY = obj["transformations"]["translation"][1];
+		newObj.translacaoZ = obj["transformations"]["translation"][2];
+
+		float rotation = obj["transformations"]["rotation"][0];
+		float scale = obj["transformations"]["scale"];
+
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(newObj.translacaoX, newObj.translacaoY, newObj.translacaoZ));
+		model = glm::rotate(model, glm::radians(rotation), glm::vec3(1.0f, 0.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(scale));
+		for (auto& mesh : newObj.meshes) {
+			mesh.model = model;
+		}
+
+		objetos.push_back(newObj);
+    }
+
 }
