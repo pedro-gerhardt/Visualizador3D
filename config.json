@@ -1,12 +1,23 @@
 {
     "objects": [
         {
-            "file": "Nave0.obj",
-            "materialFile": "texture_blue.png",
+            "file": "C:\\Users\\Patrick\\Desktop\\pg\\2024\\trabGB\\Visualizador3D\\Nave0.obj",
+            "materialFile": "C:\\Users\\Patrick\\Desktop\\pg\\2024\\trabGB\\Visualizador3D\\texture_blue.png",
             "transformations": {
                 "translation": [0.0, 0.0, 0.0],
                 "rotation": [90.0, 0.0, 0.0],
-                "scale": 1.0
+                "scale": 0.8,
+                "aplicarCurva": true
+            }
+        },
+        {
+            "file": "C:\\Users\\Patrick\\Desktop\\pg\\2024\\trabGB\\Visualizador3D\\Nave0.obj",
+            "materialFile": "C:\\Users\\Patrick\\Desktop\\pg\\2024\\trabGB\\Visualizador3D\\texture_red.png",
+            "transformations": {
+                "translation": [0.0, 0.0, 0.0],
+                "rotation": [0.0, 0.0, 0.0],
+                "scale": 0.6,
+                "aplicarCurva": false
             }
         }
     ],

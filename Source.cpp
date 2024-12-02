@@ -54,10 +54,11 @@ struct Mesh
 struct Object
 {
 	vector<Mesh> meshes;
-	float fatorEscala = 1.0f; // valor inicial de escala
+	float fatorEscala = 0.0f;
 	float translacaoX = 0.0f;
 	float translacaoY = 0.0f; 
-	float translacaoZ = 0.0f; 
+	float translacaoZ = 0.0f;
+	bool aplicarCurva = false;
 };
 
 // Propriedades parametrizáveis que são buscadas do arquivo de configuração:
@@ -80,6 +81,37 @@ bool rotateX=false, rotateY=false, rotateZ=false;
 
 vector<Object> objetos;
 int objSelecionado = 0; // Variável para armazenar o índice do objeto selecionado (0, 1 ou 2)
+float reset = 0.0f;
+
+// Função que representa minha curva paramétrica para uma trajetória circular
+glm::mat4 calculateHurricaneMotion(glm::mat4 model, float time) {
+    // Parâmetros da espiral
+    float angularSpeed = glm::radians(45.0f);  // Velocidade de rotação no eixo Y
+    float radius = 0.1f + 0.2f * time;         // Raio crescendo lentamente
+    float height = -3.0f + 0.2f * time;        // Altura aumentando com o tempo
+    float speed = 1.0f;                        // Velocidade da espiral
+
+    // Evitar raio negativo
+    radius = glm::max(radius, 0.1f);
+
+    // Calcular posição na espiral
+    float angle = time * speed;                // Ângulo da espiral
+    float x = radius * cos(angle);
+    float z = radius * sin(angle);
+    float y = height;
+
+    // Criar a matriz de transformação
+    model = glm::mat4();
+
+    // Translação para posição na espiral
+    model = glm::translate(model, glm::vec3(x, y, z));
+
+    // Rotação contínua no eixo Y
+    model = glm::rotate(model, time * angularSpeed, glm::vec3(0.0f, 1.0f, 0.0f));
+
+    return model;
+}
+
 
 const GLchar* vertexShaderSource = "#version 430\n"
 "layout (location = 0) in vec3 position;\n"
@@ -177,7 +209,8 @@ int main()
 	glViewport(0, 0, width, height);
 
 	// Carrega as configurações
-	loadConfiguration("config.json");
+	// loadConfiguration("config.json");
+	loadConfiguration("C:\\Users\\Patrick\\Desktop\\pg\\2024\\trabGB\\Visualizador3D\\config.json");
 
 	// Shader shader("phong.vs","phong.fs");
 	Shader shader(vertexShaderSource, fragmentShaderSource, false);
@@ -216,6 +249,8 @@ int main()
 
 		float angle = (GLfloat)glfwGetTime();
 
+		float time = (float)glfwGetTime(); // Get elapsed time
+
 		for (int i = 0; i < objetos.size(); i++) {
 			for (int m = 0; m < objetos[i].meshes.size(); m++) {
 				if (objetos[i].meshes[m].material.name.empty()) {
@@ -231,30 +266,34 @@ int main()
 					shader.setFloat("ns", objetos[i].meshes[m].material.ns);
 				}
 
-				if (i == objSelecionado) {
-					// Aplicar transformações apenas ao cubo selecionado
-					objetos[objSelecionado].meshes[m].model = glm::mat4(1); // Resetar a matriz
+				// Aplicar transformações apenas ao cubo selecionado
+				objetos[objSelecionado].meshes[m].model = glm::mat4(); // Resetar a matriz
 
-					// Aplique as rotações conforme o eixo selecionado
-					if (rotateX)
-					{
-						objetos[objSelecionado].meshes[m].model = glm::rotate(objetos[objSelecionado].meshes[m].model, angle, glm::vec3(1.0f, 0.0f, 0.0f));
-					}
-					else if (rotateY)
-					{
-						objetos[objSelecionado].meshes[m].model = glm::rotate(objetos[objSelecionado].meshes[m].model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
-					}
-					else if (rotateZ)
-					{
-						objetos[objSelecionado].meshes[m].model = glm::rotate(objetos[objSelecionado].meshes[m].model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
-					}
-
-					// Aplicar a escala
-					objetos[objSelecionado].meshes[m].model = glm::scale(objetos[objSelecionado].meshes[m].model, glm::vec3(objetos[i].fatorEscala, objetos[i].fatorEscala, objetos[i].fatorEscala));
-
-					// Aplicar a translação
-					objetos[objSelecionado].meshes[m].model = glm::translate(objetos[objSelecionado].meshes[m].model, glm::vec3(objetos[i].translacaoX, objetos[i].translacaoY, objetos[i].translacaoZ));
+				// Aplicar Curva Paramétrica sempre ao objeto zero
+				if (objetos[i].aplicarCurva) {
+					objetos[i].meshes[m].model = calculateHurricaneMotion(objetos[i].meshes[m].model, time - reset);
 				}
+
+				// Aplique as rotações conforme o eixo selecionado
+				if (rotateX)
+				{
+					objetos[objSelecionado].meshes[m].model = glm::rotate(objetos[objSelecionado].meshes[m].model, angle, glm::vec3(1.0f, 0.0f, 0.0f));
+				}
+				else if (rotateY)
+				{
+					objetos[objSelecionado].meshes[m].model = glm::rotate(objetos[objSelecionado].meshes[m].model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
+				}
+				else if (rotateZ)
+				{
+					objetos[objSelecionado].meshes[m].model = glm::rotate(objetos[objSelecionado].meshes[m].model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+				}
+
+				// Aplicar a escala
+				objetos[objSelecionado].meshes[m].model = glm::scale(objetos[objSelecionado].meshes[m].model, glm::vec3(objetos[objSelecionado].fatorEscala, objetos[objSelecionado].fatorEscala, objetos[objSelecionado].fatorEscala));
+
+				// Aplicar a translação
+				objetos[objSelecionado].meshes[m].model = glm::translate(objetos[objSelecionado].meshes[m].model, glm::vec3(objetos[objSelecionado].translacaoX, objetos[objSelecionado].translacaoY, objetos[objSelecionado].translacaoZ));
+				
 
 				// Passe a matriz 'model' para o shader para cada cubo
 				glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(objetos[i].meshes[m].model));
@@ -317,6 +356,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		objSelecionado = 1;
 	if (key == GLFW_KEY_3 && action == GLFW_PRESS)
 		objSelecionado = 2;
+
+	// Reseta a animação do furacão
+	if (key == GLFW_KEY_0)
+		reset = (float)glfwGetTime();
 
 	//Verifica a movimentação da câmera
 	float cameraSpeed = 0.05f;
@@ -810,17 +853,17 @@ void loadConfiguration(const std::string& configPath)
 		newObj.translacaoZ = obj["transformations"]["translation"][2];
 
 		float rotation = obj["transformations"]["rotation"][0];
-		float scale = obj["transformations"]["scale"];
+		newObj.fatorEscala = obj["transformations"]["scale"];
+		newObj.aplicarCurva = obj["transformations"]["aplicarCurva"];
 
 		glm::mat4 model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(newObj.translacaoX, newObj.translacaoY, newObj.translacaoZ));
 		model = glm::rotate(model, glm::radians(rotation), glm::vec3(1.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(scale));
+		model = glm::scale(model, glm::vec3(newObj.fatorEscala));
 		for (auto& mesh : newObj.meshes) {
 			mesh.model = model;
 		}
 
 		objetos.push_back(newObj);
     }
-
 }
